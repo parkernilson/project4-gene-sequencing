@@ -22,6 +22,19 @@ MATCH = -3
 INDEL = 5
 SUB = 1
 
+BANDED_D = 3
+
+def get_in_bounds(seq1, seq2, banded):
+	# TODO: take into account the banded constraint
+	in_bounds_col = \
+		lambda row, col: col >= row - BANDED_D and col <= row + BANDED_D \
+		if banded == True \
+		else lambda row, col: col >= 0 and col <= len(seq2)
+	in_bounds_row = \
+		lambda row, col: row >= col - BANDED_D and row <= col + BANDED_D \
+		if banded == True \
+		else lambda row, col: row >= 0 and row <= len(seq1)
+	return lambda row, col: in_bounds_col(row, col) and in_bounds_row(row, col)
 
 class RowCol:
 	def __init__(self, row, col):
@@ -37,6 +50,8 @@ class GeneSequencing:
 	def align(self, seq1, seq2, banded, align_length):
 		self.banded = banded
 		self.MaxCharactersToAlign = align_length
+
+		in_bounds = get_in_bounds(seq1, seq2, banded, align_length)
 
 		EDIT_DISTANCE = [
 			[
@@ -65,17 +80,19 @@ class GeneSequencing:
 				EDIT_DISTANCE[row][col] = potential_dist_diag
 				PREV[(row, col)] = (row - 1, col - 1)
 
-				prev_top_dist = EDIT_DISTANCE[row - 1][col]
-				potential_dist_top = prev_top_dist + 5
-				if potential_dist_top <= EDIT_DISTANCE[row][col]:
-					EDIT_DISTANCE[row][col] = potential_dist_top
-					PREV[(row, col)] = (row - 1, col)
+				if in_bounds(row - 1, col):
+					prev_top_dist = EDIT_DISTANCE[row - 1][col]
+					potential_dist_top = prev_top_dist + 5
+					if potential_dist_top <= EDIT_DISTANCE[row][col]:
+						EDIT_DISTANCE[row][col] = potential_dist_top
+						PREV[(row, col)] = (row - 1, col)
 
-				prev_left_dist = EDIT_DISTANCE[row][col - 1]
-				potential_dist_left = prev_left_dist + 5
-				if potential_dist_left <= EDIT_DISTANCE[row][col]:
-					EDIT_DISTANCE[row][col] = potential_dist_left
-					PREV[(row, col)] = (row, col - 1)
+				if in_bounds(row, col - 1):
+					prev_left_dist = EDIT_DISTANCE[row][col - 1]
+					potential_dist_left = prev_left_dist + 5
+					if potential_dist_left <= EDIT_DISTANCE[row][col]:
+						EDIT_DISTANCE[row][col] = potential_dist_left
+						PREV[(row, col)] = (row, col - 1)
 
 		seq_1_aligned_backwards = ""
 		seq_2_aligned_backwards = ""
